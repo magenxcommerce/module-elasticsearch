@@ -6,6 +6,8 @@
 
 namespace Magento\Elasticsearch\Model\Adapter;
 
+use Magento\Framework\App\ObjectManager;
+
 /**
  * Elasticsearch adapter
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -30,6 +32,12 @@ class Elasticsearch
     protected $connectionManager;
 
     /**
+     * @var DataMapperInterface
+     * @deprecated 100.2.0 Will be replaced with BatchDataMapperInterface
+     */
+    protected $documentDataMapper;
+
+    /**
      * @var \Magento\Elasticsearch\Model\Adapter\Index\IndexNameResolver
      */
     protected $indexNameResolver;
@@ -45,7 +53,7 @@ class Elasticsearch
     protected $clientConfig;
 
     /**
-     * @var \Magento\AdvancedSearch\Model\Client\ClientInterface
+     * @var \Magento\Elasticsearch\Model\Client\Elasticsearch
      */
     protected $client;
 
@@ -70,33 +78,39 @@ class Elasticsearch
     private $batchDocumentDataMapper;
 
     /**
+     * Constructor for Elasticsearch adapter.
+     *
      * @param \Magento\Elasticsearch\SearchAdapter\ConnectionManager $connectionManager
+     * @param DataMapperInterface $documentDataMapper
      * @param FieldMapperInterface $fieldMapper
      * @param \Magento\Elasticsearch\Model\Config $clientConfig
-     * @param Index\BuilderInterface $indexBuilder
+     * @param \Magento\Elasticsearch\Model\Adapter\Index\BuilderInterface $indexBuilder
      * @param \Psr\Log\LoggerInterface $logger
-     * @param Index\IndexNameResolver $indexNameResolver
-     * @param BatchDataMapperInterface $batchDocumentDataMapper
+     * @param \Magento\Elasticsearch\Model\Adapter\Index\IndexNameResolver $indexNameResolver
      * @param array $options
+     * @param BatchDataMapperInterface $batchDocumentDataMapper
      * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function __construct(
         \Magento\Elasticsearch\SearchAdapter\ConnectionManager $connectionManager,
+        DataMapperInterface $documentDataMapper,
         FieldMapperInterface $fieldMapper,
         \Magento\Elasticsearch\Model\Config $clientConfig,
         \Magento\Elasticsearch\Model\Adapter\Index\BuilderInterface $indexBuilder,
         \Psr\Log\LoggerInterface $logger,
         \Magento\Elasticsearch\Model\Adapter\Index\IndexNameResolver $indexNameResolver,
-        BatchDataMapperInterface $batchDocumentDataMapper,
-        $options = []
+        $options = [],
+        BatchDataMapperInterface $batchDocumentDataMapper = null
     ) {
         $this->connectionManager = $connectionManager;
+        $this->documentDataMapper = $documentDataMapper;
         $this->fieldMapper = $fieldMapper;
         $this->clientConfig = $clientConfig;
         $this->indexBuilder = $indexBuilder;
         $this->logger = $logger;
         $this->indexNameResolver = $indexNameResolver;
-        $this->batchDocumentDataMapper = $batchDocumentDataMapper;
+        $this->batchDocumentDataMapper = $batchDocumentDataMapper ?:
+            ObjectManager::getInstance()->get(BatchDataMapperInterface::class);
 
         try {
             $this->client = $this->connectionManager->getConnection($options);
@@ -179,16 +193,17 @@ class Elasticsearch
      */
     public function cleanIndex($storeId, $mappedIndexerId)
     {
-        // needed to fix bug with double indices in alias because of second reindex in same process
-        unset($this->preparedIndex[$storeId]);
-
         $this->checkIndex($storeId, $mappedIndexerId, true);
         $indexName = $this->indexNameResolver->getIndexName($storeId, $mappedIndexerId, $this->preparedIndex);
+        if ($this->client->isEmptyIndex($indexName)) {
+            // use existing index if empty
+            return $this;
+        }
 
         // prepare new index name and increase version
         $indexPattern = $this->indexNameResolver->getIndexPattern($storeId, $mappedIndexerId);
-        $version = (int)(str_replace($indexPattern, '', $indexName));
-        $newIndexName = $indexPattern . (++$version);
+        $version = intval(str_replace($indexPattern, '', $indexName));
+        $newIndexName = $indexPattern . ++$version;
 
         // remove index if already exists
         if ($this->client->indexExists($newIndexName)) {
@@ -271,7 +286,6 @@ class Elasticsearch
      * @param int $storeId
      * @param string $mappedIndexerId
      * @param bool $checkAlias
-     *
      * @return $this
      */
     public function checkIndex(
@@ -339,14 +353,12 @@ class Elasticsearch
     {
         $this->indexBuilder->setStoreId($storeId);
         $settings = $this->indexBuilder->build();
-        $allAttributeTypes = $this->fieldMapper->getAllAttributesTypes(
-            [
-                'entityType' => $mappedIndexerId,
-                // Use store id instead of website id from context for save existing fields mapping.
-                // In future websiteId will be eliminated due to index stored per store
-                'websiteId' => $storeId
-            ]
-        );
+        $allAttributeTypes = $this->fieldMapper->getAllAttributesTypes([
+            'entityType' => $mappedIndexerId,
+            // Use store id instead of website id from context for save existing fields mapping.
+            // In future websiteId will be eliminated due to index stored per store
+            'websiteId' => $storeId
+        ]);
         $settings['index']['mapping']['total_fields']['limit'] = $this->getMappingTotalFieldsLimit($allAttributeTypes);
         $this->client->createIndex($indexName, ['settings' => $settings]);
         $this->client->addFieldsMapping(

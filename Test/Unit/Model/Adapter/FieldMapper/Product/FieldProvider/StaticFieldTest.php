@@ -7,74 +7,66 @@ declare(strict_types=1);
 
 namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\FieldMapper\Product\FieldProvider;
 
-use Magento\Eav\Model\Config;
 use Magento\Eav\Model\Entity\Attribute\AbstractAttribute;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
+use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
+use Magento\Eav\Model\Config;
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeProvider;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ConverterInterface
-    as IndexTypeConverterInterface;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ResolverInterface
-    as FieldIndexResolver;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldName\ResolverInterface
-    as FieldNameResolver;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\AttributeAdapter;
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldType\ConverterInterface
     as FieldTypeConverterInterface;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ConverterInterface
+    as IndexTypeConverterInterface;
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldType\ResolverInterface
     as FieldTypeResolver;
-use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\StaticField;
-use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldIndex\ResolverInterface
+    as FieldIndexResolver;
 
 /**
- * Unit tests for \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\StaticField class.
+ * @SuppressWarnings(PHPMD)
  */
-class StaticFieldTest extends TestCase
+class StaticFieldTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var StaticField
+     * @var \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\StaticField
      */
     private $provider;
 
     /**
-     * @var Config|MockObject
+     * @var \Magento\Eav\Model\Config|\PHPUnit_Framework_MockObject_MockObject
      */
     private $eavConfig;
 
     /**
-     * @var FieldTypeConverterInterface|MockObject
+     * @var FieldTypeConverterInterface
      */
     private $fieldTypeConverter;
 
     /**
-     * @var IndexTypeConverterInterface|MockObject
+     * @var IndexTypeConverterInterface
      */
     private $indexTypeConverter;
 
     /**
-     * @var AttributeProvider|MockObject
+     * @var AttributeProvider
      */
     private $attributeAdapterProvider;
 
     /**
-     * @var FieldIndexResolver|MockObject
+     * @var FieldIndexResolver
      */
     private $fieldIndexResolver;
 
     /**
-     * @var FieldTypeResolver|MockObject
+     * @var FieldTypeResolver
      */
     private $fieldTypeResolver;
 
     /**
-     * @var FieldNameResolver|MockObject
+     * Set up test environment
+     *
+     * @return void
      */
-    private $fieldNameResolver;
-
-    /**
-     * @inheritdoc
-     */
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->eavConfig = $this->getMockBuilder(Config::class)
             ->disableOriginalConstructor()
@@ -98,15 +90,11 @@ class StaticFieldTest extends TestCase
             ->disableOriginalConstructor()
             ->setMethods(['getFieldIndex'])
             ->getMock();
-        $this->fieldNameResolver = $this->getMockBuilder(FieldNameResolver::class)
-            ->disableOriginalConstructor()
-            ->setMethods(['getFieldName'])
-            ->getMock();
 
         $objectManager = new ObjectManagerHelper($this);
 
         $this->provider = $objectManager->getObject(
-            StaticField::class,
+            \Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\StaticField::class,
             [
                 'eavConfig' => $this->eavConfig,
                 'fieldTypeConverter' => $this->fieldTypeConverter,
@@ -114,43 +102,28 @@ class StaticFieldTest extends TestCase
                 'attributeAdapterProvider' => $this->attributeAdapterProvider,
                 'fieldIndexResolver' => $this->fieldIndexResolver,
                 'fieldTypeResolver' => $this->fieldTypeResolver,
-                'fieldNameResolver' => $this->fieldNameResolver,
-                'excludedAttributes' => ['price'],
             ]
         );
     }
 
     /**
+     * @dataProvider attributeProvider
      * @param string $attributeCode
      * @param string $inputType
-     * @param string|bool $indexType
-     * @param bool $isComplexType
-     * @param string $complexType
-     * @param bool $isSortable
-     * @param bool $isTextType
-     * @param string $fieldName
-     * @param string $compositeFieldName
-     * @param string $sortFieldName
+     * @param $indexType
+     * @param $isComplexType
+     * @param $complexType
      * @param array $expected
      * @return void
-     * @dataProvider attributeProvider
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
-     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function testGetAllAttributesTypes(
-        string $attributeCode,
-        string $inputType,
+        $attributeCode,
+        $inputType,
         $indexType,
-        bool $isComplexType,
-        string $complexType,
-        bool $isSortable,
-        bool $isTextType,
-        string $fieldName,
-        string $compositeFieldName,
-        string $sortFieldName,
-        array $expected
-    ): void {
+        $isComplexType,
+        $complexType,
+        $expected
+    ) {
         $this->fieldTypeResolver->expects($this->any())
             ->method('getFieldType')
             ->willReturn($inputType);
@@ -159,30 +132,7 @@ class StaticFieldTest extends TestCase
             ->willReturn($indexType);
         $this->indexTypeConverter->expects($this->any())
             ->method('convert')
-            ->with($this->anything())
-            ->willReturnCallback(
-                function ($type) {
-                    if ($type === 'no_index') {
-                        return 'no';
-                    } elseif ($type === 'no_analyze') {
-                        return 'not_analyzed';
-                    }
-                }
-            );
-        $this->fieldNameResolver->expects($this->any())
-            ->method('getFieldName')
-            ->with($this->anything())
-            ->willReturnCallback(
-                function ($attributeMock, $context) use ($fieldName, $compositeFieldName, $sortFieldName) {
-                    if (empty($context)) {
-                        return $fieldName;
-                    } elseif ($context['type'] === 'sort') {
-                        return $sortFieldName;
-                    } elseif ($context['type'] === 'text') {
-                        return $compositeFieldName;
-                    }
-                }
-            );
+            ->willReturn('no');
 
         $productAttributeMock = $this->getMockBuilder(AbstractAttribute::class)
             ->setMethods(['getAttributeCode'])
@@ -196,17 +146,11 @@ class StaticFieldTest extends TestCase
 
         $attributeMock = $this->getMockBuilder(AttributeAdapter::class)
             ->disableOriginalConstructor()
-            ->setMethods(['isComplexType', 'getAttributeCode', 'isSortable', 'isTextType'])
+            ->setMethods(['isComplexType', 'getAttributeCode'])
             ->getMock();
         $attributeMock->expects($this->any())
             ->method('isComplexType')
             ->willReturn($isComplexType);
-        $attributeMock->expects($this->any())
-            ->method('isSortable')
-            ->willReturn($isSortable);
-        $attributeMock->expects($this->any())
-            ->method('isTextType')
-            ->willReturn($isTextType);
         $attributeMock->expects($this->any())
             ->method('getAttributeCode')
             ->willReturn($attributeCode);
@@ -217,22 +161,23 @@ class StaticFieldTest extends TestCase
         $this->fieldTypeConverter->expects($this->any())
             ->method('convert')
             ->with($this->anything())
-            ->willReturnCallback(
+            ->will($this->returnCallback(
                 function ($type) use ($complexType) {
                     static $callCount = [];
                     $callCount[$type] = !isset($callCount[$type]) ? 1 : ++$callCount[$type];
 
                     if ($type === 'string') {
                         return 'string';
+                    }
+                    if ($type === 'string') {
+                        return 'string';
                     } elseif ($type === 'float') {
                         return 'float';
-                    } elseif ($type === 'keyword') {
-                        return 'string';
                     } else {
                         return $complexType;
                     }
                 }
-            );
+            ));
 
         $this->assertEquals(
             $expected,
@@ -242,9 +187,8 @@ class StaticFieldTest extends TestCase
 
     /**
      * @return array
-     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function attributeProvider(): array
+    public function attributeProvider()
     {
         return [
             [
@@ -253,127 +197,53 @@ class StaticFieldTest extends TestCase
                 true,
                 true,
                 'text',
-                false,
-                true,
-                'category_ids',
-                'category_ids_value',
-                '',
                 [
                     'category_ids' => [
                         'type' => 'select',
-                        'index' => true,
-                        'fields' => [
-                            'keyword' => [
-                                'type' => 'string',
-                                'index' => 'not_analyzed',
-                            ],
-                        ],
+                        'index' => true
                     ],
                     'category_ids_value' => [
-                        'type' => 'string',
+                        'type' => 'string'
                     ],
                     'store_id' => [
                         'type' => 'string',
-                        'index' => 'no',
-                    ],
-                ],
+                        'index' => 'no'
+                    ]
+                ]
             ],
             [
                 'attr_code',
                 'text',
                 'no',
                 false,
-                'text',
-                false,
-                true,
-                'attr_code',
-                '',
-                '',
+                null,
                 [
                     'attr_code' => [
                         'type' => 'text',
-                        'index' => 'no',
-                        'fields' => [
-                            'keyword' => [
-                                'type' => 'string',
-                                'index' => 'not_analyzed',
-                            ],
-                        ],
+                        'index' => 'no'
                     ],
                     'store_id' => [
                         'type' => 'string',
-                        'index' => 'no',
-                    ],
+                        'index' => 'no'
+                    ]
                 ],
             ],
             [
                 'attr_code',
                 'text',
+                null,
                 false,
-                false,
-                'text',
-                false,
-                false,
-                'attr_code',
-                '',
-                '',
+                null,
                 [
                     'attr_code' => [
-                        'type' => 'text',
-                        'index' => false,
+                        'type' => 'text'
                     ],
                     'store_id' => [
                         'type' => 'string',
-                        'index' => 'no',
-                    ],
-                ],
-            ],
-            [
-                'attr_code',
-                'text',
-                false,
-                false,
-                'text',
-                true,
-                false,
-                'attr_code',
-                '',
-                'sort_attr_code',
-                [
-                    'attr_code' => [
-                        'type' => 'text',
-                        'index' => false,
-                        'fields' => [
-                            'sort_attr_code' => [
-                                'type' => 'string',
-                                'index' => 'not_analyzed',
-                            ],
-                        ],
-                    ],
-                    'store_id' => [
-                        'type' => 'string',
-                        'index' => 'no',
-                    ],
-                ],
-            ],
-            [
-                'price',
-                'text',
-                false,
-                false,
-                'text',
-                false,
-                false,
-                'price',
-                '',
-                '',
-                [
-                    'store_id' => [
-                        'type' => 'string',
-                        'index' => 'no',
-                    ],
-                ],
-            ],
+                        'index' => 'no'
+                    ]
+                ]
+            ]
         ];
     }
 }

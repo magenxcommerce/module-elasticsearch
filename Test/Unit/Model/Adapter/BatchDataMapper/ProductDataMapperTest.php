@@ -3,8 +3,6 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Elasticsearch\Test\Unit\Model\Adapter\BatchDataMapper;
 
 use Magento\AdvancedSearch\Model\Adapter\DataMapper\AdditionalFieldsProviderInterface;
@@ -16,13 +14,13 @@ use Magento\Elasticsearch\Model\Adapter\Document\Builder;
 use Magento\Elasticsearch\Model\Adapter\FieldMapperInterface;
 use Magento\Elasticsearch\Model\Adapter\FieldType\Date;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager as ObjectManagerHelper;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 
 /**
+ * Class ProductDataMapperTest
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ProductDataMapperTest extends TestCase
+class ProductDataMapperTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ProductDataMapper
@@ -30,45 +28,45 @@ class ProductDataMapperTest extends TestCase
     private $model;
 
     /**
-     * @var Builder|MockObject
+     * @var Builder|\PHPUnit_Framework_MockObject_MockObject
      */
     private $builderMock;
 
     /**
-     * @var Attribute|MockObject
+     * @var Attribute|\PHPUnit_Framework_MockObject_MockObject
      */
     private $attribute;
 
     /**
-     * @var FieldMapperInterface|MockObject
+     * @var FieldMapperInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $fieldMapperMock;
 
     /**
-     * @var Date|MockObject
+     * @var Date|\PHPUnit_Framework_MockObject_MockObject
      */
     private $dateFieldTypeMock;
 
     /**
-     * @var AdditionalFieldsProviderInterface|MockObject
+     * @var AdditionalFieldsProviderInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $additionalFieldsProvider;
 
     /**
-     * @var MockObject
+     * @var \PHPUnit_Framework_MockObject_MockObject
      */
     private $dataProvider;
 
     /**
      * Set up test environment.
      */
-    protected function setUp(): void
+    protected function setUp()
     {
         $this->builderMock = $this->createTestProxy(Builder::class);
-        $this->fieldMapperMock = $this->getMockForAbstractClass(FieldMapperInterface::class);
+        $this->fieldMapperMock = $this->createMock(FieldMapperInterface::class);
         $this->dataProvider = $this->createMock(DataProvider::class);
         $this->attribute = $this->createMock(Attribute::class);
-        $this->additionalFieldsProvider = $this->getMockForAbstractClass(AdditionalFieldsProviderInterface::class);
+        $this->additionalFieldsProvider = $this->createMock(AdditionalFieldsProviderInterface::class);
         $this->dateFieldTypeMock = $this->createMock(Date::class);
 
         $objectManager = new ObjectManagerHelper($this);
@@ -99,10 +97,10 @@ class ProductDataMapperTest extends TestCase
         $this->builderMock->expects($this->any())
             ->method('addFields')
             ->withConsecutive([$additionalFields])
-            ->willReturnSelf();
+            ->will($this->returnSelf());
         $this->builderMock->expects($this->any())
             ->method('build')
-            ->willReturn([]);
+            ->will($this->returnValue([]));
         $this->additionalFieldsProvider->expects($this->once())
             ->method('getFields')
             ->with([$productId], $storeId)
@@ -195,9 +193,9 @@ class ProductDataMapperTest extends TestCase
      * Return attribute mock
      *
      * @param array attributeData
-     * @return MockObject
+     * @return \PHPUnit_Framework_MockObject_MockObject
      */
-    private function getAttribute(array $attributeData): MockObject
+    private function getAttribute(array $attributeData): \PHPUnit_Framework_MockObject_MockObject
     {
         $attributeMock = $this->createMock(Attribute::class);
         $attributeMock->method('getAttributeCode')->willReturn($attributeData['code']);
@@ -206,7 +204,7 @@ class ProductDataMapperTest extends TestCase
         $attributeMock->method('getIsSearchable')->willReturn($attributeData['is_searchable']);
         $options = [];
         foreach ($attributeData['options'] as $option) {
-            $optionMock = $this->getMockForAbstractClass(AttributeOptionInterface::class);
+            $optionMock = $this->createMock(AttributeOptionInterface::class);
             $optionMock->method('getValue')->willReturn($option['value']);
             $optionMock->method('getLabel')->willReturn($option['label']);
             $options[] = $optionMock;

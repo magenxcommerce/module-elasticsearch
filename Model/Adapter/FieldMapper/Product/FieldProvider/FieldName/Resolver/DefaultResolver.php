@@ -51,22 +51,22 @@ class DefaultResolver implements ResolverInterface
      */
     public function getFieldName(AttributeAdapter $attribute, $context = []): ?string
     {
-        $attributeCode = $attribute->getAttributeCode();
-        if (empty($context['type'])) {
-            return $attributeCode;
-        }
-
         $fieldType = $this->fieldTypeResolver->getFieldType($attribute);
+        $attributeCode = $attribute->getAttributeCode();
         $frontendInput = $attribute->getFrontendInput();
-        $fieldName = $attributeCode;
-        if ($context['type'] === FieldMapperInterface::TYPE_FILTER) {
+        if (empty($context['type'])) {
+            $fieldName = $attributeCode;
+        } elseif ($context['type'] === FieldMapperInterface::TYPE_FILTER) {
             if ($this->isStringServiceFieldType($fieldType)) {
-                return $this->getQueryTypeFieldName($frontendInput, $fieldType, $attributeCode);
+                return $this->getFieldName(
+                    $attribute,
+                    array_merge($context, ['type' => FieldMapperInterface::TYPE_QUERY])
+                );
             }
             $fieldName = $attributeCode;
         } elseif ($context['type'] === FieldMapperInterface::TYPE_QUERY) {
             $fieldName = $this->getQueryTypeFieldName($frontendInput, $fieldType, $attributeCode);
-        } elseif ($context['type'] == FieldMapperInterface::TYPE_SORT && $attribute->isSortable()) {
+        } else {
             $fieldName = 'sort_' . $attributeCode;
         }
 
@@ -115,11 +115,10 @@ class DefaultResolver implements ResolverInterface
     private function getRefinedFieldName($frontendInput, $fieldType, $attributeCode)
     {
         $stringTypeKey = $this->fieldTypeConverter->convert(FieldTypeConverterInterface::INTERNAL_DATA_TYPE_STRING);
-        $keywordTypeKey = $this->fieldTypeConverter->convert(FieldTypeConverterInterface::INTERNAL_DATA_TYPE_KEYWORD);
         switch ($frontendInput) {
             case 'select':
             case 'multiselect':
-                return in_array($fieldType, [$stringTypeKey, $keywordTypeKey, 'integer'], true)
+                return in_array($fieldType, [$stringTypeKey, 'integer'], true)
                     ? $attributeCode . '_value'
                     : $attributeCode;
             case 'boolean':

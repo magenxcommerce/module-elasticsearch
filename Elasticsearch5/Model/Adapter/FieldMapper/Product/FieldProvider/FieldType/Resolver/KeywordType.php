@@ -37,9 +37,8 @@ class KeywordType implements ResolverInterface
      */
     public function getFieldType(AttributeAdapter $attribute): ?string
     {
-        if (($attribute->isComplexType()
-            || (!$attribute->isSearchable() && !$attribute->isAlwaysIndexable() && $attribute->isFilterable()))
-            && !$attribute->isBooleanType()
+        if ($attribute->isComplexType()
+            || (!$attribute->isSearchable() && !$attribute->isAlwaysIndexable() && $attribute->isFilterable())
         ) {
             return $this->fieldTypeConverter->convert(ConverterInterface::INTERNAL_DATA_TYPE_KEYWORD);
         }

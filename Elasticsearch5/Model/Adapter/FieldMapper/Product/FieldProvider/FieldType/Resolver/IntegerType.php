@@ -45,7 +45,8 @@ class IntegerType implements ResolverInterface
     public function getFieldType(AttributeAdapter $attribute): ?string
     {
         if (in_array($attribute->getAttributeCode(), $this->integerTypeAttributes, true)
-            || ($attribute->isIntegerType() || $attribute->isBooleanType())
+            || (($attribute->isIntegerType() || $attribute->isBooleanType())
+                && !$attribute->isUserDefined())
         ) {
             return $this->fieldTypeConverter->convert(ConverterInterface::INTERNAL_DATA_TYPE_INT);
         }

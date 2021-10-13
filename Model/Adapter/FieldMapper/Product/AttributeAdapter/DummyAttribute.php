@@ -59,24 +59,4 @@ class DummyAttribute implements CustomAttributesDataInterface
     {
         return $this;
     }
-
-    /**
-     * Get property value that guarantee of using an attribute in sort purposes on the storefront.
-     *
-     * @return bool
-     */
-    public function getUsedForSortBy()
-    {
-        return false;
-    }
-
-    /**
-     * Dummy attribute doesn't have backend type.
-     *
-     * @return null
-     */
-    public function getBackendType()
-    {
-        return null;
-    }
 }

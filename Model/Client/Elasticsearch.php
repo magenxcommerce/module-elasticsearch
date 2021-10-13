@@ -96,35 +96,24 @@ class Elasticsearch implements ClientInterface
     }
 
     /**
-     * Build config.
-     *
      * @param array $options
      * @return array
      */
     private function buildConfig($options = [])
     {
-        $hostname = preg_replace('/http[s]?:\/\//i', '', $options['hostname']);
-        // @codingStandardsIgnoreStart
+        $host = preg_replace('/http[s]?:\/\//i', '', $options['hostname']);
         $protocol = parse_url($options['hostname'], PHP_URL_SCHEME);
-        // @codingStandardsIgnoreEnd
         if (!$protocol) {
             $protocol = 'http';
         }
-
-        $authString = '';
-        if (!empty($options['enableAuth']) && (int)$options['enableAuth'] === 1) {
-            $authString = "{$options['username']}:{$options['password']}@";
-        }
-
-        $portString = '';
         if (!empty($options['port'])) {
-            $portString = ':' . $options['port'];
+            $host .= ':' . $options['port'];
         }
-
-        $host = $protocol . '://' . $authString . $hostname . $portString;
+        if (!empty($options['enableAuth']) && ($options['enableAuth'] == 1)) {
+            $host = sprintf('%s://%s:%s@%s', $protocol, $options['username'], $options['password'], $host);
+        }
 
         $options['hosts'] = [$host];
-
         return $options;
     }
 
@@ -148,12 +137,10 @@ class Elasticsearch implements ClientInterface
      */
     public function createIndex($index, $settings)
     {
-        $this->getClient()->indices()->create(
-            [
-                'index' => $index,
-                'body' => $settings,
-            ]
-        );
+        $this->getClient()->indices()->create([
+            'index' => $index,
+            'body' => $settings,
+        ]);
     }
 
     /**
@@ -215,10 +202,9 @@ class Elasticsearch implements ClientInterface
     }
 
     /**
-     * Check if alias exists.
-     *
      * @param string $alias
      * @param string $index
+     *
      * @return bool
      */
     public function existsAlias($alias, $index = '')
@@ -231,9 +217,8 @@ class Elasticsearch implements ClientInterface
     }
 
     /**
-     * Get alias.
-     *
      * @param string $alias
+     *
      * @return array
      */
     public function getAlias($alias)
@@ -267,18 +252,7 @@ class Elasticsearch implements ClientInterface
                                 'match' => 'price_*',
                                 'match_mapping' => 'string',
                                 'mapping' => [
-                                    'type' => 'float',
-                                    'store' => true
-                                ],
-                            ],
-                        ],
-                        [
-                            'position_mapping' => [
-                                'match' => 'position_*',
-                                'match_mapping' => 'string',
-                                'mapping' => [
-                                    'type' => 'integer',
-                                    'index' => 'not_analyzed',
+                                    'type' => 'float'
                                 ],
                             ],
                         ],
@@ -288,10 +262,19 @@ class Elasticsearch implements ClientInterface
                                 'match_mapping' => 'string',
                                 'mapping' => [
                                     'type' => 'string',
-                                    'index' => 'not_analyzed',
+                                    'index' => 'no'
                                 ],
                             ],
-                        ]
+                        ],
+                        [
+                            'position_mapping' => [
+                                'match' => 'position_*',
+                                'match_mapping' => 'string',
+                                'mapping' => [
+                                    'type' => 'int'
+                                ],
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -311,12 +294,10 @@ class Elasticsearch implements ClientInterface
      */
     public function deleteMapping($index, $entityType)
     {
-        $this->getClient()->indices()->deleteMapping(
-            [
-                'index' => $index,
-                'type' => $entityType,
-            ]
-        );
+        $this->getClient()->indices()->deleteMapping([
+            'index' => $index,
+            'type' => $entityType,
+        ]);
     }
 
     /**

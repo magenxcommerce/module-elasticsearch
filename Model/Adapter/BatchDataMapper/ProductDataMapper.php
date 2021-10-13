@@ -12,18 +12,12 @@ use Magento\Elasticsearch\Model\Adapter\FieldMapperInterface;
 use Magento\Elasticsearch\Model\Adapter\BatchDataMapperInterface;
 use Magento\Elasticsearch\Model\Adapter\FieldType\Date as DateFieldType;
 use Magento\AdvancedSearch\Model\Adapter\DataMapper\AdditionalFieldsProviderInterface;
-use Magento\Eav\Api\Data\AttributeOptionInterface;
 
 /**
  * Map product index data to search engine metadata
  */
 class ProductDataMapper implements BatchDataMapperInterface
 {
-    /**
-     * @var AttributeOptionInterface[]
-     */
-    private $attributeOptionsCache;
-
     /**
      * @var Builder
      */
@@ -78,13 +72,6 @@ class ProductDataMapper implements BatchDataMapperInterface
     ];
 
     /**
-     * @var string[]
-     */
-    private $sortableAttributesValuesToImplode = [
-        'name',
-    ];
-
-    /**
      * Construction for DocumentDataMapper
      *
      * @param Builder $builder
@@ -93,7 +80,6 @@ class ProductDataMapper implements BatchDataMapperInterface
      * @param AdditionalFieldsProviderInterface $additionalFieldsProvider
      * @param DataProvider $dataProvider
      * @param array $excludedAttributes
-     * @param array $sortableAttributesValuesToImplode
      */
     public function __construct(
         Builder $builder,
@@ -101,20 +87,14 @@ class ProductDataMapper implements BatchDataMapperInterface
         DateFieldType $dateFieldType,
         AdditionalFieldsProviderInterface $additionalFieldsProvider,
         DataProvider $dataProvider,
-        array $excludedAttributes = [],
-        array $sortableAttributesValuesToImplode = []
+        array $excludedAttributes = []
     ) {
         $this->builder = $builder;
         $this->fieldMapper = $fieldMapper;
         $this->dateFieldType = $dateFieldType;
         $this->excludedAttributes = array_merge($this->defaultExcludedAttributes, $excludedAttributes);
-        $this->sortableAttributesValuesToImplode = array_merge(
-            $this->sortableAttributesValuesToImplode,
-            $sortableAttributesValuesToImplode
-        );
         $this->additionalFieldsProvider = $additionalFieldsProvider;
         $this->dataProvider = $dataProvider;
-        $this->attributeOptionsCache = [];
     }
 
     /**
@@ -254,13 +234,6 @@ class ProductDataMapper implements BatchDataMapperInterface
             }
         }
 
-        if ($attribute->getUsedForSortBy()
-            && in_array($attribute->getAttributeCode(), $this->sortableAttributesValuesToImplode)
-            && count($attributeValues) > 1
-        ) {
-            $attributeValues = [$productId => implode(' ', $attributeValues)];
-        }
-
         return $attributeValues;
     }
 
@@ -272,14 +245,9 @@ class ProductDataMapper implements BatchDataMapperInterface
      */
     private function prepareMultiselectValues(array $values): array
     {
-        return \array_merge(
-            ...\array_map(
-                function (string $value) {
-                    return \explode(',', $value);
-                },
-                $values
-            )
-        );
+        return \array_merge(...\array_map(function (string $value) {
+            return \explode(',', $value);
+        }, $values));
     }
 
     /**
@@ -304,39 +272,13 @@ class ProductDataMapper implements BatchDataMapperInterface
     private function getValuesLabels(Attribute $attribute, array $attributeValues): array
     {
         $attributeLabels = [];
-
-        $options = $this->getAttributeOptions($attribute);
-        if (empty($options)) {
-            return $attributeLabels;
-        }
-
-        foreach ($attributeValues as $attributeValue) {
-            if (isset($options[$attributeValue])) {
-                $attributeLabels[] = $options[$attributeValue]->getLabel();
+        foreach ($attribute->getOptions() as $option) {
+            if (\in_array($option->getValue(), $attributeValues)) {
+                $attributeLabels[] = $option->getLabel();
             }
         }
 
         return $attributeLabels;
-    }
-
-    /**
-     * Retrieve options for attribute
-     *
-     * @param Attribute $attribute
-     * @return array
-     */
-    private function getAttributeOptions(Attribute $attribute): array
-    {
-        if (!isset($this->attributeOptionsCache[$attribute->getId()])) {
-            $options = $attribute->getOptions() ?? [];
-            $optionsByValue = [];
-            foreach ($options as $option) {
-                $optionsByValue[$option->getValue()] = $option;
-            }
-            $this->attributeOptionsCache[$attribute->getId()] = $optionsByValue;
-        }
-
-        return $this->attributeOptionsCache[$attribute->getId()];
     }
 
     /**

@@ -76,7 +76,6 @@ class ResponseFactory
             [
                 'documents' => $documents,
                 'aggregations' => $aggregations,
-                'total' => $response['total']
             ]
         );
     }

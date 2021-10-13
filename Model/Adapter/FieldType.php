@@ -14,7 +14,7 @@ use Magento\Elasticsearch\Model\Adapter\FieldMapper\Product\FieldProvider\FieldT
  * @api
  * @since 100.1.0
  *
- * @deprecated 100.3.0 This class provide not full data about field type. Only basic rules apply in this class.
+ * @deprecated This class provide not full data about field type. Only basic rules apply in this class.
  * @see ResolverInterface
  */
 class FieldType
@@ -37,12 +37,11 @@ class FieldType
     /**
      * Get field type.
      *
-     * @deprecated 100.3.0
+     * @deprecated
      * @see ResolverInterface::getFieldType
      *
      * @param AbstractAttribute $attribute
      * @return string
-     * @since 100.1.0
      */
     public function getFieldType($attribute)
     {
@@ -50,7 +49,7 @@ class FieldType
         $backendType = $attribute->getBackendType();
         $frontendInput = $attribute->getFrontendInput();
 
-        if ($backendType === 'timestamp') {
+        if (in_array($backendType, ['timestamp', 'datetime'], true)) {
             $fieldType = self::ES_DATA_TYPE_DATE;
         } elseif ((in_array($backendType, ['int', 'smallint'], true)
             || (in_array($frontendInput, ['select', 'boolean'], true) && $backendType !== 'varchar'))

@@ -116,18 +116,6 @@ class AttributeAdapter
     }
 
     /**
-     * Check if attribute is text type
-     *
-     * @return bool
-     */
-    public function isTextType(): bool
-    {
-        return in_array($this->getAttribute()->getBackendType(), ['varchar', 'static'], true)
-            && in_array($this->getFrontendInput(), ['text'], true)
-            && $this->getAttribute()->getIsVisible();
-    }
-
-    /**
      * Check if attribute has boolean type.
      *
      * @return bool
@@ -159,21 +147,11 @@ class AttributeAdapter
     }
 
     /**
-     * Check if attribute is sortable.
-     *
-     * @return bool
-     */
-    public function isSortable(): bool
-    {
-        return (int)$this->getAttribute()->getUsedForSortBy() === 1;
-    }
-
-    /**
      * Check if attribute is defined by user.
      *
-     * @return bool|null
+     * @return string
      */
-    public function isUserDefined()
+    public function isUserDefined(): string
     {
         return $this->getAttribute()->getIsUserDefined();
     }

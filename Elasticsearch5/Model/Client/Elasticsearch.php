@@ -10,8 +10,6 @@ use Magento\AdvancedSearch\Model\Client\ClientInterface;
 
 /**
  * Elasticsearch client
- *
- * @deprecated 100.3.5 the Elasticsearch 5 doesn't supported due to EOL
  */
 class Elasticsearch implements ClientInterface
 {
@@ -93,7 +91,7 @@ class Elasticsearch implements ClientInterface
     }
 
     /**
-     * Validate connection params.
+     * Validate connection params
      *
      * @return bool
      */
@@ -110,28 +108,19 @@ class Elasticsearch implements ClientInterface
      */
     private function buildConfig($options = [])
     {
-        $hostname = preg_replace('/http[s]?:\/\//i', '', $options['hostname']);
-        // @codingStandardsIgnoreStart
+        $host = preg_replace('/http[s]?:\/\//i', '', $options['hostname']);
         $protocol = parse_url($options['hostname'], PHP_URL_SCHEME);
-        // @codingStandardsIgnoreEnd
         if (!$protocol) {
             $protocol = 'http';
         }
-
-        $authString = '';
-        if (!empty($options['enableAuth']) && (int)$options['enableAuth'] === 1) {
-            $authString = "{$options['username']}:{$options['password']}@";
-        }
-
-        $portString = '';
         if (!empty($options['port'])) {
-            $portString = ':' . $options['port'];
+            $host .= ':' . $options['port'];
         }
-
-        $host = $protocol . '://' . $authString . $hostname . $portString;
+        if (!empty($options['enableAuth']) && ($options['enableAuth'] == 1)) {
+            $host = sprintf('%s://%s:%s@%s', $protocol, $options['username'], $options['password'], $host);
+        }
 
         $options['hosts'] = [$host];
-
         return $options;
     }
 
@@ -155,12 +144,10 @@ class Elasticsearch implements ClientInterface
      */
     public function createIndex($index, $settings)
     {
-        $this->getClient()->indices()->create(
-            [
-                'index' => $index,
-                'body' => $settings,
-            ]
-        );
+        $this->getClient()->indices()->create([
+            'index' => $index,
+            'body' => $settings,
+        ]);
     }
 
     /**
@@ -263,12 +250,10 @@ class Elasticsearch implements ClientInterface
             'type' => $entityType,
             'body' => [
                 $entityType => [
-                    '_all' => $this->prepareFieldInfo(
-                        [
-                            'enabled' => true,
-                            'type' => 'text',
-                        ]
-                    ),
+                    '_all' => $this->prepareFieldInfo([
+                        'enabled' => true,
+                        'type' => 'text',
+                    ]),
                     'properties' => [],
                     'dynamic_templates' => [
                         [
@@ -282,27 +267,24 @@ class Elasticsearch implements ClientInterface
                             ],
                         ],
                         [
+                            'string_mapping' => [
+                                'match' => '*',
+                                'match_mapping_type' => 'string',
+                                'mapping' => $this->prepareFieldInfo([
+                                    'type' => 'text',
+                                    'index' => false,
+                                ]),
+                            ],
+                        ],
+                        [
                             'position_mapping' => [
                                 'match' => 'position_*',
                                 'match_mapping_type' => 'string',
                                 'mapping' => [
-                                    'type' => 'integer',
-                                    'index' => true,
+                                    'type' => 'int',
                                 ],
                             ],
                         ],
-                        [
-                            'string_mapping' => [
-                                'match' => '*',
-                                'match_mapping_type' => 'string',
-                                'mapping' => $this->prepareFieldInfo(
-                                    [
-                                        'type' => 'text',
-                                        'index' => true,
-                                    ]
-                                ),
-                            ],
-                        ]
                     ],
                 ],
             ],
@@ -347,9 +329,10 @@ class Elasticsearch implements ClientInterface
      */
     public function deleteMapping($index, $entityType)
     {
-        $this->getClient()->indices()->deleteMapping(
-            ['index' => $index, 'type' => $entityType]
-        );
+        $this->getClient()->indices()->deleteMapping([
+            'index' => $index,
+            'type' => $entityType,
+        ]);
     }
 
     /**
